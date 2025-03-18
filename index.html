@@ -10,6 +10,10 @@
             content: " *";
             color: red;
         }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
     </style>
 </head>
 <body>
@@ -92,12 +96,15 @@
                     <thead>
                     <tr>
                         <th>Kỳ</th>
+                        <th>Tổng tiền</th>
+                        <th>Chỉ số điện cũ</th>
+                        <th>Chỉ số điện mới</th>
                         <th>Tiền phòng</th>
                         <th>Tiền điện</th>
                         <th>Tiền nước</th>
                         <th>Tiền mạng</th>
                         <th>Phát sinh</th>
-                        <th>Tổng tiền</th>
+                        <th>Thời gian tạo</th>
                         <th>Thao tác</th>
                     </tr>
                     </thead>
@@ -129,7 +136,19 @@
         // Lấy dữ liệu từ localStorage
         function loadData() {
             let rentData = JSON.parse(localStorage.getItem('rentData')) || [];
-            return rentData.sort((a, b) => new Date(b.periodRaw) - new Date(a.periodRaw));
+            // Sắp xếp theo thời gian tạo mới nhất
+            return rentData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }
+
+        // Format thời gian tạo
+        function formatDateTime(dateTimeStr) {
+            const dt = new Date(dateTimeStr);
+            const day = dt.getDate().toString().padStart(2, '0');
+            const month = (dt.getMonth() + 1).toString().padStart(2, '0');
+            const year = dt.getFullYear();
+            const hours = dt.getHours().toString().padStart(2, '0');
+            const minutes = dt.getMinutes().toString().padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
         }
 
         // Tự động điền thông tin từ kỳ trước
@@ -206,12 +225,15 @@
                 $('#historyData').append(`
             <tr>
               <td>${item.period}</td>
+              <td>${item.totalAmount.toLocaleString()}</td>
+              <td>${item.oldElectricityReading}</td>
+              <td>${item.newElectricityReading}</td>
               <td>${item.roomRent.toLocaleString()}</td>
               <td>${item.electricityAmount.toLocaleString()}</td>
               <td>${item.waterBill.toLocaleString()}</td>
               <td>${item.internetBill.toLocaleString()}</td>
               <td>${item.additional.toLocaleString()}</td>
-              <td>${item.totalAmount.toLocaleString()}</td>
+              <td>${formatDateTime(item.createdAt)}</td>
               <td>
                 <button class="btn btn-sm btn-danger delete-btn" data-index="${index}">Xóa</button>
               </td>
@@ -265,7 +287,8 @@
                 waterBill: parseFloat($('#waterBill').val()),
                 internetBill: parseFloat($('#internetBill').val()),
                 additional: parseFloat($('#additional').val()) || 0,
-                totalAmount: parseFloat($('#totalAmount').val())
+                totalAmount: parseFloat($('#totalAmount').val()),
+                createdAt: new Date().toISOString() // Thêm thời gian tạo
             };
 
             // Lưu vào localStorage
