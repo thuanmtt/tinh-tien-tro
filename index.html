@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng Dụng Tính Tiền Trọ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .required::after {
+            content: " *";
+            color: red;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+    <h1 class="text-center mb-4">Ứng Dụng Tính Tiền Trọ</h1>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Thêm Mới Thông Tin Tiền Trọ</h5>
+        </div>
+        <div class="card-body">
+            <form id="rentForm">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="period" class="form-label required">Kỳ (MM/YYYY)</label>
+                        <input type="month" class="form-control" id="period" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="electricityPrice" class="form-label required">Giá điện/số</label>
+                        <input type="number" class="form-control" id="electricityPrice" required min="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="roomRent" class="form-label required">Tiền phòng</label>
+                        <input type="number" class="form-control" id="roomRent" required min="0">
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="oldElectricityReading" class="form-label required">Chỉ số điện cũ</label>
+                        <input type="number" class="form-control" id="oldElectricityReading" required min="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="newElectricityReading" class="form-label required">Chỉ số điện mới</label>
+                        <input type="number" class="form-control" id="newElectricityReading" required min="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="electricityAmount" class="form-label">Tiền điện</label>
+                        <input type="number" class="form-control" id="electricityAmount" readonly>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="waterBill" class="form-label required">Tiền nước</label>
+                        <input type="number" class="form-control" id="waterBill" required min="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="internetBill" class="form-label required">Tiền mạng</label>
+                        <input type="number" class="form-control" id="internetBill" required min="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="additional" class="form-label">Phát sinh</label>
+                        <input type="number" class="form-control" id="additional" min="0" value="0">
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4 offset-md-8">
+                        <label for="totalAmount" class="form-label">Tổng tiền</label>
+                        <input type="number" class="form-control bg-light" id="totalAmount" readonly>
+                    </div>
+                </div>
+
+                <div class="text-end">
+                    <button type="button" class="btn btn-secondary me-2" id="calculateBtn">Tính toán</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Lịch Sử Tiền Trọ</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                    <tr>
+                        <th>Kỳ</th>
+                        <th>Tiền phòng</th>
+                        <th>Tiền điện</th>
+                        <th>Tiền nước</th>
+                        <th>Tiền mạng</th>
+                        <th>Phát sinh</th>
+                        <th>Tổng tiền</th>
+                        <th>Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody id="historyData">
+                    <!-- Dữ liệu sẽ được thêm vào đây bằng JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Cập nhật tiền điện khi nhập chỉ số điện hoặc giá điện
+        function updateElectricityAmount() {
+            const oldReading = parseFloat($('#oldElectricityReading').val()) || 0;
+            const newReading = parseFloat($('#newElectricityReading').val()) || 0;
+            const price = parseFloat($('#electricityPrice').val()) || 0;
+
+            if (newReading >= oldReading && price > 0) {
+                const consumption = newReading - oldReading;
+                const amount = consumption * price;
+                $('#electricityAmount').val(amount);
+                updateTotal();
+            }
+        }
+
+        // Cập nhật tổng tiền
+        function updateTotal() {
+            const roomRent = parseFloat($('#roomRent').val()) || 0;
+            const electricityAmount = parseFloat($('#electricityAmount').val()) || 0;
+            const waterBill = parseFloat($('#waterBill').val()) || 0;
+            const internetBill = parseFloat($('#internetBill').val()) || 0;
+            const additional = parseFloat($('#additional').val()) || 0;
+
+            const total = roomRent + electricityAmount + waterBill + internetBill + additional;
+            $('#totalAmount').val(total);
+        }
+
+        // Sự kiện khi nhập các trường liên quan đến tiền điện
+        $('#oldElectricityReading, #newElectricityReading, #electricityPrice').on('input', updateElectricityAmount);
+
+        // Sự kiện khi nhập các trường khác
+        $('#roomRent, #waterBill, #internetBill, #additional').on('input', updateTotal);
+
+        // Nút tính toán
+        $('#calculateBtn').click(function () {
+            updateElectricityAmount();
+            updateTotal();
+        });
+
+        // Format date MM/YYYY
+        function formatPeriod(periodString) {
+            const date = new Date(periodString);
+            return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+        }
+
+        // Lấy dữ liệu từ localStorage
+        function loadData() {
+            let rentData = JSON.parse(localStorage.getItem('rentData')) || [];
+            return rentData.sort((a, b) => new Date(b.periodRaw) - new Date(a.periodRaw));
+        }
+
+        // Hiển thị dữ liệu
+        function displayData() {
+            const rentData = loadData();
+            $('#historyData').empty();
+
+            rentData.forEach((item, index) => {
+                $('#historyData').append(`
+            <tr>
+              <td>${item.period}</td>
+              <td>${item.roomRent.toLocaleString()}</td>
+              <td>${item.electricityAmount.toLocaleString()}</td>
+              <td>${item.waterBill.toLocaleString()}</td>
+              <td>${item.internetBill.toLocaleString()}</td>
+              <td>${item.additional.toLocaleString()}</td>
+              <td>${item.totalAmount.toLocaleString()}</td>
+              <td>
+                <button class="btn btn-sm btn-danger delete-btn" data-index="${index}">Xóa</button>
+              </td>
+            </tr>
+          `);
+            });
+
+            // Sự kiện xóa
+            $('.delete-btn').click(function () {
+                const index = $(this).data('index');
+                deleteItem(index);
+            });
+        }
+
+        // Xóa một mục
+        function deleteItem(index) {
+            const rentData = loadData();
+            rentData.splice(index, 1);
+            localStorage.setItem('rentData', JSON.stringify(rentData));
+            displayData();
+        }
+
+        // Lưu dữ liệu
+        $('#rentForm').submit(function (e) {
+            e.preventDefault();
+
+            // Kiểm tra dữ liệu đầu vào
+            const oldReading = parseFloat($('#oldElectricityReading').val());
+            const newReading = parseFloat($('#newElectricityReading').val());
+
+            if (newReading < oldReading) {
+                alert('Chỉ số điện mới không thể nhỏ hơn chỉ số điện cũ!');
+                return;
+            }
+
+            // Cập nhật tính toán trước khi lưu
+            updateElectricityAmount();
+            updateTotal();
+
+            const periodValue = $('#period').val();
+
+            // Tạo object chứa thông tin
+            const rentInfo = {
+                periodRaw: periodValue,
+                period: formatPeriod(periodValue),
+                electricityPrice: parseFloat($('#electricityPrice').val()),
+                oldElectricityReading: oldReading,
+                newElectricityReading: newReading,
+                roomRent: parseFloat($('#roomRent').val()),
+                electricityAmount: parseFloat($('#electricityAmount').val()),
+                waterBill: parseFloat($('#waterBill').val()),
+                internetBill: parseFloat($('#internetBill').val()),
+                additional: parseFloat($('#additional').val()) || 0,
+                totalAmount: parseFloat($('#totalAmount').val())
+            };
+
+            // Lưu vào localStorage
+            let rentData = loadData();
+            rentData.push(rentInfo);
+            localStorage.setItem('rentData', JSON.stringify(rentData));
+
+            // Hiển thị lại dữ liệu
+            displayData();
+
+            // Reset form
+            $('#rentForm')[0].reset();
+            $('#electricityAmount').val('');
+            $('#totalAmount').val('');
+
+            alert('Đã lưu thông tin thành công!');
+        });
+
+        // Hiển thị dữ liệu khi trang được tải
+        displayData();
+    });
+</script>
+</body>
+</html>
