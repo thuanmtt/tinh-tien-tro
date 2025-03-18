@@ -133,15 +133,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
     $(document).ready(function () {
-        // Tự động đặt kỳ là tháng trước
-        function setLastMonth() {
+        // Tự động đặt kỳ là tháng này
+        function setMonth() {
             const today = new Date();
-            // Lấy tháng trước
-            let lastMonth = new Date(today);
-            lastMonth.setMonth(today.getMonth() - 1);
             // Format thành YYYY-MM cho input type month
-            const year = lastMonth.getFullYear();
-            const month = (lastMonth.getMonth() + 1).toString().padStart(2, '0');
+            const year = today.getFullYear();
+            const month = (today.getMonth() + 1).toString().padStart(2, '0');
             $('#period').val(`${year}-${month}`);
         }
 
@@ -317,7 +314,7 @@
             $('#totalAmount').val('');
 
             // Tự động điền lại kỳ và thông tin từ kỳ trước
-            setLastMonth();
+            setMonth();
             autoFillFromLastPeriod();
 
             alert('Đã lưu thông tin thành công!');
@@ -373,7 +370,7 @@
         }
 
         // Khởi tạo khi trang tải
-        setLastMonth();
+        setMonth();
         displayData();
         autoFillFromLastPeriod();
     });
