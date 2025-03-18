@@ -114,6 +114,45 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
     $(document).ready(function () {
+        // Tự động đặt kỳ là tháng trước
+        function setLastMonth() {
+            const today = new Date();
+            // Lấy tháng trước
+            let lastMonth = new Date(today);
+            lastMonth.setMonth(today.getMonth() - 1);
+            // Format thành YYYY-MM cho input type month
+            const year = lastMonth.getFullYear();
+            const month = (lastMonth.getMonth() + 1).toString().padStart(2, '0');
+            $('#period').val(`${year}-${month}`);
+        }
+
+        // Lấy dữ liệu từ localStorage
+        function loadData() {
+            let rentData = JSON.parse(localStorage.getItem('rentData')) || [];
+            return rentData.sort((a, b) => new Date(b.periodRaw) - new Date(a.periodRaw));
+        }
+
+        // Tự động điền thông tin từ kỳ trước
+        function autoFillFromLastPeriod() {
+            const rentData = loadData();
+            if (rentData.length > 0) {
+                const lastRecord = rentData[0]; // Lấy bản ghi mới nhất
+
+                // Điền các thông tin từ kỳ cũ
+                $('#electricityPrice').val(lastRecord.electricityPrice);
+                $('#roomRent').val(lastRecord.roomRent);
+                $('#oldElectricityReading').val(lastRecord.newElectricityReading); // Chỉ số điện cũ bằng chỉ số điện mới của kỳ trước
+                $('#waterBill').val(lastRecord.waterBill);
+                $('#internetBill').val(lastRecord.internetBill);
+                $('#additional').val(lastRecord.additional);
+
+                // Xóa các trường được tính toán
+                $('#newElectricityReading').val('');
+                $('#electricityAmount').val('');
+                $('#totalAmount').val('');
+            }
+        }
+
         // Cập nhật tiền điện khi nhập chỉ số điện hoặc giá điện
         function updateElectricityAmount() {
             const oldReading = parseFloat($('#oldElectricityReading').val()) || 0;
@@ -156,12 +195,6 @@
         function formatPeriod(periodString) {
             const date = new Date(periodString);
             return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
-        }
-
-        // Lấy dữ liệu từ localStorage
-        function loadData() {
-            let rentData = JSON.parse(localStorage.getItem('rentData')) || [];
-            return rentData.sort((a, b) => new Date(b.periodRaw) - new Date(a.periodRaw));
         }
 
         // Hiển thị dữ liệu
@@ -248,11 +281,66 @@
             $('#electricityAmount').val('');
             $('#totalAmount').val('');
 
+            // Tự động điền lại kỳ và thông tin từ kỳ trước
+            setLastMonth();
+            autoFillFromLastPeriod();
+
             alert('Đã lưu thông tin thành công!');
         });
 
-        // Hiển thị dữ liệu khi trang được tải
+        // Sự kiện thay đổi kỳ - nếu người dùng thay đổi kỳ thì tự động điền lại thông tin
+        $('#period').on('change', function () {
+            // Thử tìm dữ liệu cho kỳ đang chọn để tự động điền
+            const selectedPeriod = $(this).val();
+            const rentData = loadData();
+
+            // Xóa các trường trước khi điền dữ liệu mới
+            $('#electricityPrice').val('');
+            $('#roomRent').val('');
+            $('#oldElectricityReading').val('');
+            $('#newElectricityReading').val('');
+            $('#waterBill').val('');
+            $('#internetBill').val('');
+            $('#additional').val('0');
+            $('#electricityAmount').val('');
+            $('#totalAmount').val('');
+
+            // Tìm kỳ trước đó để lấy thông tin
+            const lastPeriodData = findPreviousPeriod(selectedPeriod, rentData);
+            if (lastPeriodData) {
+                $('#electricityPrice').val(lastPeriodData.electricityPrice);
+                $('#roomRent').val(lastPeriodData.roomRent);
+                $('#oldElectricityReading').val(lastPeriodData.newElectricityReading);
+                $('#waterBill').val(lastPeriodData.waterBill);
+                $('#internetBill').val(lastPeriodData.internetBill);
+                $('#additional').val(lastPeriodData.additional);
+            } else {
+                // Nếu không tìm thấy kỳ trước, dùng dữ liệu mới nhất
+                autoFillFromLastPeriod();
+            }
+        });
+
+        // Tìm kỳ trước đó
+        function findPreviousPeriod(currentPeriod, rentData) {
+            if (!rentData.length) return null;
+
+            const currentDate = new Date(currentPeriod);
+            currentDate.setDate(1); // Đặt ngày thành 1 để so sánh chính xác tháng
+
+            // Tạo ngày của tháng trước
+            const prevMonth = new Date(currentDate);
+            prevMonth.setMonth(currentDate.getMonth() - 1);
+            const prevMonthStr = `${prevMonth.getFullYear()}-${(prevMonth.getMonth() + 1).toString().padStart(2, '0')}`;
+
+            // Tìm bản ghi của tháng trước
+            const prevRecord = rentData.find(item => item.periodRaw.startsWith(prevMonthStr));
+            return prevRecord;
+        }
+
+        // Khởi tạo khi trang tải
+        setLastMonth();
         displayData();
+        autoFillFromLastPeriod();
     });
 </script>
 </body>
