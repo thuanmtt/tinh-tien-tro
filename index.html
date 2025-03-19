@@ -26,11 +26,31 @@
         .table-responsive {
             overflow-x: auto;
         }
+
+        /* Vị trí của toast container */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
     </style>
 </head>
 <body>
 <div class="container mt-4">
     <h1 class="text-center mb-4">Ứng Dụng Tính Tiền Trọ</h1>
+
+    <!-- Toast Container -->
+    <div class="toast-container">
+        <div class="toast align-items-center" role="alert" aria-live="assertive" aria-atomic="true"
+             id="notificationToast">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage">
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
 
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
@@ -129,10 +149,46 @@
     </div>
 </div>
 
+<!-- Modal xác nhận xóa -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Xác nhận xóa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Bạn có chắc chắn muốn xóa bản ghi này không?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Xóa</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
     $(document).ready(function () {
+        // Khởi tạo toast
+        var toastElList = [].slice.call(document.querySelectorAll('.toast'));
+        var toastList = toastElList.map(function (toastEl) {
+            return new bootstrap.Toast(toastEl, {
+                delay: 3000
+            });
+        });
+
+        // Hàm hiển thị toast thông báo
+        function showToast(message, type = 'success') {
+            $('#toastMessage').text(message);
+            $('#notificationToast').removeClass('bg-success bg-danger bg-warning').addClass('bg-' + type);
+            $('#notificationToast').removeClass('text-dark').addClass(type === 'warning' ? 'text-dark' : 'text-white');
+            toastList[0].show();
+        }
+
         // Tự động đặt kỳ là tháng này
         function setMonth() {
             const today = new Date();
@@ -225,6 +281,9 @@
             return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
         }
 
+        // Biến để lưu index của item cần xóa
+        let deleteIndex = -1;
+
         // Hiển thị dữ liệu
         function displayData() {
             const rentData = loadData();
@@ -250,20 +309,25 @@
           `);
             });
 
-            // Sự kiện xóa
+            // Sự kiện xóa - hiển thị modal xác nhận
             $('.delete-btn').click(function () {
-                const index = $(this).data('index');
-                deleteItem(index);
+                deleteIndex = $(this).data('index');
+                $('#deleteConfirmModal').modal('show');
             });
         }
 
-        // Xóa một mục
-        function deleteItem(index) {
-            const rentData = loadData();
-            rentData.splice(index, 1);
-            localStorage.setItem('rentData', JSON.stringify(rentData));
-            displayData();
-        }
+        // Xóa một mục khi đã xác nhận
+        $('#confirmDeleteBtn').click(function () {
+            if (deleteIndex !== -1) {
+                const rentData = loadData();
+                rentData.splice(deleteIndex, 1);
+                localStorage.setItem('rentData', JSON.stringify(rentData));
+                $('#deleteConfirmModal').modal('hide');
+                displayData();
+                showToast('Đã xóa bản ghi thành công!', 'success');
+                deleteIndex = -1;
+            }
+        });
 
         // Lưu dữ liệu
         $('#rentForm').submit(function (e) {
@@ -274,7 +338,7 @@
             const newReading = parseFloat($('#newElectricityReading').val());
 
             if (newReading < oldReading) {
-                alert('Chỉ số điện mới không thể nhỏ hơn chỉ số điện cũ!');
+                showToast('Chỉ số điện mới không thể nhỏ hơn chỉ số điện cũ!', 'danger');
                 return;
             }
 
@@ -317,7 +381,7 @@
             setMonth();
             autoFillFromLastPeriod();
 
-            alert('Đã lưu thông tin thành công!');
+            showToast('Đã lưu thông tin thành công!', 'success');
         });
 
         // Sự kiện thay đổi kỳ - nếu người dùng thay đổi kỳ thì tự động điền lại thông tin
